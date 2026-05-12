@@ -13,7 +13,7 @@ import { DescriptionCell } from './editable-cell'
 type PLCEnumeratedDatatype = Extract<PLCDataType, { derivation: 'enumerated' }>
 
 type DataTypeEnumeratedTableProps = {
-  name: string
+  data: PLCEnumeratedDatatype
   values: PLCEnumeratedDatatype['values']
   initialValue?: string
   selectedRow: number
@@ -22,7 +22,7 @@ type DataTypeEnumeratedTableProps = {
 }
 
 const EnumeratedTable = ({
-  name,
+  data,
   values,
   initialValue,
   selectedRow,
@@ -58,7 +58,7 @@ const EnumeratedTable = ({
         ),
       }),
     ],
-    [values, name, selectedRow, initialValue],
+    [values, data.name, selectedRow, initialValue],
   )
 
   const handleBlur = (rowIndex: number) => {
@@ -72,11 +72,11 @@ const EnumeratedTable = ({
       if (inputValue === '') {
         const newRows = prevRows.filter((_, index) => index !== rowIndex)
         const optionalSchema = {
-          name: name,
+          ...data,
           values: newRows.map((row) => ({ description: row.description })),
           initialValue: initialValue,
         }
-        updateDatatype(name, optionalSchema as PLCDataType)
+        updateDatatype(data.name, optionalSchema as PLCDataType)
         resetBorders()
         setArrayTable({ selectedRow: -1 })
         toast({
@@ -97,11 +97,11 @@ const EnumeratedTable = ({
       if (checkIfExists) {
         const newRows = prevRows.filter((_, index) => index !== rowIndex)
         const optionalSchema = {
-          name: name,
+          ...data,
           values: newRows.map((row) => ({ description: row.description })),
           initialValue: initialValue,
         }
-        updateDatatype(name, optionalSchema as PLCDataType)
+        updateDatatype(data.name, optionalSchema as PLCDataType)
         resetBorders()
         setArrayTable({ selectedRow: -1 })
         toast({
@@ -115,11 +115,11 @@ const EnumeratedTable = ({
       if (!validation.ok) {
         const newRows = prevRows.filter((_, index) => index !== rowIndex)
         const optionalSchema = {
-          name: name,
+          ...data,
           values: newRows.map((row) => ({ description: row.description })),
           initialValue: initialValue,
         }
-        updateDatatype(name, optionalSchema as PLCDataType)
+        updateDatatype(data.name, optionalSchema as PLCDataType)
         resetBorders()
         setArrayTable({ selectedRow: -1 })
         toast({
@@ -134,11 +134,11 @@ const EnumeratedTable = ({
           description: index === rowIndex ? inputValue : row.description,
         }))
         const optionalSchema = {
-          name: name,
+          ...data,
           values: newRows.map((row) => ({ description: row.description })),
           initialValue: initialValue,
         }
-        updateDatatype(name, optionalSchema as PLCDataType)
+        updateDatatype(data.name, optionalSchema as PLCDataType)
         return newRows
       }
     }

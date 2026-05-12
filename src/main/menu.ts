@@ -368,6 +368,11 @@ export default class MenuBuilder {
           role: 'togglefullscreen',
         },
         {
+          label: 'Developer Tools',
+          accelerator: 'Cmd+Option+I',
+          role: 'toggleDevTools',
+        },
+        {
           label: i18n.t('menu:display.submenu.sortAlpha'),
           enabled: false,
         },
@@ -633,6 +638,11 @@ export default class MenuBuilder {
           {
             label: i18n.t('menu:display.submenu.fullScreen'),
             role: 'togglefullscreen',
+          },
+          {
+            label: 'Developer Tools',
+            accelerator: 'Ctrl+Shift+I',
+            role: 'toggleDevTools',
           },
           {
             label: i18n.t('menu:display.submenu.sortAlpha'),

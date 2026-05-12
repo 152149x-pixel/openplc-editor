@@ -50,11 +50,11 @@ if (!skipDLLs && !(fs.existsSync(webpackPaths.dllPath) && fs.existsSync(manifest
 const srcPath = join(webpackPaths.rootPath, 'src')
 
 const configuration: webpack.Configuration = {
-  devtool: 'inline-source-map',
+  devtool: 'source-map',
 
   mode: 'development',
 
-  target: ['web', 'electron-renderer'],
+  target: 'web',
 
   entry: [
     `webpack-dev-server/client?http://localhost:${port}/dist`,
@@ -66,6 +66,8 @@ const configuration: webpack.Configuration = {
     path: webpackPaths.distRendererPath,
     publicPath: '/',
     filename: 'renderer.dev.js',
+    chunkFormat: 'array-push',
+    chunkLoading: 'jsonp',
     library: {
       type: 'umd',
     },
@@ -202,6 +204,13 @@ const configuration: webpack.Configuration = {
     compress: true,
     hot: true,
     headers: { 'Access-Control-Allow-Origin': '*' },
+    client: {
+      overlay: {
+        errors: true,
+        warnings: false,
+        runtimeErrors: false,
+      },
+    },
     static: { publicPath: '/' },
     historyApiFallback: { verbose: true },
   },

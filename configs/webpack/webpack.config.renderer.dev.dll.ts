@@ -19,7 +19,7 @@ const dist = webpackPaths.dllPath
 const configuration: webpack.Configuration = {
   context: webpackPaths.rootPath,
 
-  devtool: 'eval',
+  devtool: 'source-map',
 
   mode: 'development',
 
@@ -40,6 +40,8 @@ const configuration: webpack.Configuration = {
   output: {
     path: dist,
     filename: '[name].dev.dll.js',
+    chunkFormat: 'array-push',
+    chunkLoading: 'jsonp',
     library: {
       name: 'renderer',
       type: 'var',

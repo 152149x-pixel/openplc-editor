@@ -239,7 +239,7 @@ const StructureDataType = () => {
         <div aria-label='structure base type container' className='flex w-1/2 flex-col gap-3'></div>
         <div aria-label='structure initial value container' className='w-1/2'></div>
       </div>
-      <div className='flex h-full w-full flex-1 flex-col overflow-hidden'>
+      <div className='min-h-0 w-full flex-1 overflow-auto' style={{ scrollbarGutter: 'stable' }}>
         <StructureTable
           tableData={tableData}
           selectedRow={parseInt(editorStructure.selectedRow)}

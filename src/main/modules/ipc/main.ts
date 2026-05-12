@@ -605,7 +605,9 @@ class MainProcessBridge implements MainIpcModule {
 
     // Theme and store handlers
     this.ipcMain.on('system:update-theme', this.mainIpcEventHandlers.handleUpdateTheme)
-    // this.ipcMain.handle('app:store-get', this.mainIpcEventHandlers.getStoreValue)
+    this.registerHandle('app:store-get', this.handleStoreGet)
+    this.ipcMain.removeAllListeners('app:store-set')
+    this.ipcMain.on('app:store-set', this.handleStoreSet)
 
     // ===================== COMPILER SERVICE =====================
     // TODO: This handle should be refactored to use MessagePortMain for better performance.
@@ -881,6 +883,14 @@ class MainProcessBridge implements MainIpcModule {
       logger.error('Error reading history file: ' + getErrorMessage(error))
       return []
     }
+  }
+  handleStoreGet = async (_event: IpcMainInvokeEvent, key?: string) => {
+    const appStore = this.store as unknown as { get: (key: string) => unknown }
+    return key ? appStore.get(key) : appStore.get('last_projects')
+  }
+  handleStoreSet = (_event: IpcMainEvent, key: string, value: string) => {
+    const appStore = this.store as unknown as { set: (key: string, value: string) => void }
+    appStore.set(key, value)
   }
   handleAppQuit = () => {
     this.simulatorModule.stop()

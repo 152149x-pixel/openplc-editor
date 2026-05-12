@@ -13,7 +13,7 @@ import { DimensionCell } from './editable-cell'
 type PLCArrayDatatype = Extract<PLCDataType, { derivation: 'array' }>
 
 type DataTypeDimensionsTableProps = {
-  name: string
+  data: PLCArrayDatatype
   tableData: PLCArrayDatatype['dimensions']
   selectedRow: number
   handleRowClick: (row: HTMLTableRowElement) => void
@@ -21,7 +21,7 @@ type DataTypeDimensionsTableProps = {
 }
 
 const DimensionsTable = ({
-  name,
+  data,
   tableData,
   selectedRow,
   handleRowClick,
@@ -58,7 +58,7 @@ const DimensionsTable = ({
       }),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [name, selectedRow],
+    [data.name, selectedRow],
   )
 
   const handleBlur = (rowIndex: number) => {
@@ -74,10 +74,10 @@ const DimensionsTable = ({
 
         const newRows = prevRows.filter((_, index) => index !== rowIndex)
         const optionalSchema = {
-          name: name,
+          ...data,
           dimensions: newRows.map((row) => ({ dimension: row.dimension })),
         }
-        updateDatatype(name, optionalSchema as PLCArrayDatatype)
+        updateDatatype(data.name, optionalSchema as PLCArrayDatatype)
         setArrayTable({ selectedRow: -1 })
         toast({
           title: 'Invalid array',
@@ -92,10 +92,10 @@ const DimensionsTable = ({
           dimension: index === rowIndex ? inputValue : row.dimension,
         }))
         const optionalSchema = {
-          name: name,
+          ...data,
           dimensions: newRows.map((row) => ({ dimension: row.dimension })),
         }
-        updateDatatype(name, optionalSchema as PLCDataType)
+        updateDatatype(data.name, optionalSchema as PLCDataType)
       }
     }
   }

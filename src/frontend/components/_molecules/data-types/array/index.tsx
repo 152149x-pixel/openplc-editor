@@ -98,16 +98,13 @@ const ArrayDataType = ({ data, ...rest }: ArrayDatatypeProps) => {
   }
 
   const addNewRow = () => {
+    captureAndPush(editor.meta.name)
+
     setTableData((prevRows) => {
-      const isFirst = prevRows.length === 0
       const newRows = [...prevRows, { dimension: '' }]
 
-      if (isFirst) {
-        captureAndPush(editor.meta.name)
-      }
-
       setArrayTable({ selectedRow: newRows.length - 1 })
-      updateDatatype(data.name, { dimensions: newRows } as PLCArrayDatatype)
+      updateDatatype(data.name, { ...data, dimensions: newRows } as PLCArrayDatatype)
       return newRows
     })
   }
@@ -116,18 +113,16 @@ const ArrayDataType = ({ data, ...rest }: ArrayDatatypeProps) => {
     captureAndPush(editor.meta.name)
 
     setTableData((prevRows) => {
-      if (arrayTable.selectedRow !== null) {
+      if (arrayTable.selectedRow >= 0 && arrayTable.selectedRow < prevRows.length) {
         const newRows = prevRows.filter((_, index) => index !== arrayTable.selectedRow)
 
         const newFocusIndex = arrayTable.selectedRow === newRows.length ? newRows.length - 1 : arrayTable.selectedRow
         setArrayTable({ selectedRow: newFocusIndex })
 
-        newRows.forEach(() => {
-          const optionalSchema = {
-            dimensions: newRows.map((row) => ({ dimension: row?.dimension })),
-          }
-          updateDatatype(data.name, optionalSchema as PLCArrayDatatype)
-        })
+        updateDatatype(data.name, {
+          ...data,
+          dimensions: newRows.map((row) => ({ dimension: row?.dimension })),
+        } as PLCArrayDatatype)
         prevRows = newRows
       }
       return prevRows
@@ -138,7 +133,7 @@ const ArrayDataType = ({ data, ...rest }: ArrayDatatypeProps) => {
     captureAndPush(editor.meta.name)
 
     setTableData((prevRows) => {
-      if (arrayTable.selectedRow !== null && arrayTable.selectedRow > 0) {
+      if (arrayTable.selectedRow > 0 && arrayTable.selectedRow < prevRows.length) {
         const newRows = [...prevRows]
         const temp = newRows[arrayTable.selectedRow]
         newRows[arrayTable.selectedRow] = newRows[arrayTable.selectedRow - 1]
@@ -147,12 +142,10 @@ const ArrayDataType = ({ data, ...rest }: ArrayDatatypeProps) => {
         const newFocusIndex = arrayTable.selectedRow - 1
         setArrayTable({ selectedRow: newFocusIndex })
 
-        newRows.forEach(() => {
-          const optionalSchema = {
-            dimensions: newRows.map((row) => ({ dimension: row?.dimension })),
-          }
-          updateDatatype(data.name, optionalSchema as PLCArrayDatatype)
-        })
+        updateDatatype(data.name, {
+          ...data,
+          dimensions: newRows.map((row) => ({ dimension: row?.dimension })),
+        } as PLCArrayDatatype)
         prevRows = newRows
       }
       return prevRows
@@ -163,7 +156,7 @@ const ArrayDataType = ({ data, ...rest }: ArrayDatatypeProps) => {
     captureAndPush(editor.meta.name)
 
     setTableData((prevRows) => {
-      if (arrayTable.selectedRow !== null && arrayTable.selectedRow < prevRows.length - 1) {
+      if (arrayTable.selectedRow >= 0 && arrayTable.selectedRow < prevRows.length - 1) {
         const newRows = [...prevRows]
         const temp = newRows[arrayTable.selectedRow]
         newRows[arrayTable.selectedRow] = newRows[arrayTable.selectedRow + 1]
@@ -172,12 +165,10 @@ const ArrayDataType = ({ data, ...rest }: ArrayDatatypeProps) => {
         const newFocusIndex = arrayTable.selectedRow + 1
         setArrayTable({ selectedRow: newFocusIndex })
 
-        newRows.forEach(() => {
-          const optionalSchema = {
-            dimensions: newRows.map((row) => ({ dimension: row?.dimension })),
-          }
-          updateDatatype(data.name, optionalSchema as PLCArrayDatatype)
-        })
+        updateDatatype(data.name, {
+          ...data,
+          dimensions: newRows.map((row) => ({ dimension: row?.dimension })),
+        } as PLCArrayDatatype)
         prevRows = newRows
       }
       return prevRows
@@ -185,7 +176,11 @@ const ArrayDataType = ({ data, ...rest }: ArrayDatatypeProps) => {
   }
 
   return (
-    <div aria-label='Array data type container' className='flex h-full w-full flex-col gap-4 bg-transparent' {...rest}>
+    <div
+      aria-label='Array data type container'
+      className='flex h-full min-h-0 w-full flex-col gap-4 overflow-hidden bg-transparent'
+      {...rest}
+    >
       <div aria-label='Data type content actions container' className='flex h-fit w-full gap-8'>
         <div aria-label='Array base type container' className='flex w-1/2 flex-col gap-3'>
           <div aria-label='Array base type content' className='flex h-fit w-full items-center justify-between'>
@@ -218,7 +213,7 @@ const ArrayDataType = ({ data, ...rest }: ArrayDatatypeProps) => {
         </div>
       </div>
 
-      <div className='flex w-[600px] flex-col gap-3'>
+      <div className='flex min-h-0 w-[600px] max-w-full flex-1 flex-col gap-3 overflow-hidden'>
         <div aria-label='Array data type table actions container' className='flex h-fit items-center justify-between'>
           <p className='cursor-default select-none font-caption text-xs font-medium text-neutral-1000 dark:text-neutral-100'>
             Dimensions
@@ -259,7 +254,7 @@ const ArrayDataType = ({ data, ...rest }: ArrayDatatypeProps) => {
         </div>
 
         <DimensionsTable
-          name={data.name}
+          data={data}
           tableData={tableData}
           handleRowClick={(row) => setArrayTable({ selectedRow: parseInt(row.id) })}
           selectedRow={arrayTable.selectedRow}

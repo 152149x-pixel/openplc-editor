@@ -55,6 +55,7 @@ const EnumeratorDataType = ({ data, ...rest }: EnumDatatypeProps) => {
       const newRows = [...prevRows, { description: '' }]
       setArrayTable({ selectedRow: newRows.length - 1 })
       updateDatatype(data.name, {
+        ...data,
         values: newRows.map((row) => ({ description: row?.description })),
         initialValue: data.initialValue,
       } as PLCEnumeratedDatatype)
@@ -66,13 +67,14 @@ const EnumeratorDataType = ({ data, ...rest }: EnumDatatypeProps) => {
     captureAndPush(editor.meta.name)
 
     setTableData((prevRows) => {
-      if (arrayTable.selectedRow !== null) {
+      if (arrayTable.selectedRow >= 0 && arrayTable.selectedRow < prevRows.length) {
         const newRows = prevRows.filter((_, index) => index !== arrayTable.selectedRow)
 
         const newFocusIndex = arrayTable.selectedRow === newRows.length ? newRows.length - 1 : arrayTable.selectedRow
         setArrayTable({ selectedRow: newFocusIndex })
 
         updateDatatype(data.name, {
+          ...data,
           values: newRows.map((row) => ({ description: row?.description })),
           initialValue: data.initialValue,
         } as PLCEnumeratedDatatype)
@@ -87,7 +89,7 @@ const EnumeratorDataType = ({ data, ...rest }: EnumDatatypeProps) => {
     captureAndPush(editor.meta.name)
 
     setTableData((prevRows) => {
-      if (arrayTable.selectedRow !== null && arrayTable.selectedRow > 0) {
+      if (arrayTable.selectedRow > 0 && arrayTable.selectedRow < prevRows.length) {
         const newRows = [...prevRows]
         const temp = newRows[arrayTable.selectedRow]
         newRows[arrayTable.selectedRow] = newRows[arrayTable.selectedRow - 1]
@@ -97,6 +99,7 @@ const EnumeratorDataType = ({ data, ...rest }: EnumDatatypeProps) => {
         setArrayTable({ selectedRow: newFocusIndex })
 
         updateDatatype(data.name, {
+          ...data,
           values: newRows.map((row) => ({ description: row?.description })),
           initialValue: data.initialValue,
         } as PLCEnumeratedDatatype)
@@ -111,7 +114,7 @@ const EnumeratorDataType = ({ data, ...rest }: EnumDatatypeProps) => {
     captureAndPush(editor.meta.name)
 
     setTableData((prevRows) => {
-      if (arrayTable.selectedRow !== null && arrayTable.selectedRow < prevRows.length - 1) {
+      if (arrayTable.selectedRow >= 0 && arrayTable.selectedRow < prevRows.length - 1) {
         const newRows = [...prevRows]
         const temp = newRows[arrayTable.selectedRow]
         newRows[arrayTable.selectedRow] = newRows[arrayTable.selectedRow + 1]
@@ -121,6 +124,7 @@ const EnumeratorDataType = ({ data, ...rest }: EnumDatatypeProps) => {
         setArrayTable({ selectedRow: newFocusIndex })
 
         updateDatatype(data.name, {
+          ...data,
           values: newRows.map((row) => ({ description: row?.description })),
           initialValue: data.initialValue,
         } as PLCEnumeratedDatatype)
@@ -134,11 +138,11 @@ const EnumeratorDataType = ({ data, ...rest }: EnumDatatypeProps) => {
   return (
     <div
       aria-label='Enumerated data type container'
-      className='flex h-full w-full flex-1 flex-row gap-4 overflow-hidden bg-transparent'
+      className='flex h-full min-h-0 w-full flex-1 flex-row gap-4 overflow-hidden bg-transparent'
       {...rest}
     >
-      <div className='flex w-full justify-between gap-8'>
-        <div className='w-[600px]'>
+      <div className='flex min-h-0 w-full justify-between gap-8 overflow-hidden'>
+        <div className='flex min-h-0 w-[600px] max-w-full flex-col overflow-hidden'>
           <div aria-label='Enumerated base type container' className='flex flex-col gap-3'></div>
           <div
             aria-label='Enum data type table actions container'
@@ -187,7 +191,7 @@ const EnumeratorDataType = ({ data, ...rest }: EnumDatatypeProps) => {
           </div>
 
           <EnumeratedTable
-            name={data.name}
+            data={data}
             values={tableData}
             initialValue={initialValueData}
             selectedRow={arrayTable.selectedRow}

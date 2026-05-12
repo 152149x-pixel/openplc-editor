@@ -1,5 +1,5 @@
 import { flexRender, Table as ReactTable } from '@tanstack/react-table'
-import React, { RefObject } from 'react'
+import React, { RefObject, useEffect } from 'react'
 
 import { Table, TableBody, TableCell, TableRow } from '../table'
 
@@ -21,9 +21,13 @@ const GenericDataTypeTable: React.FC<GenericTableProps> = ({
   tableBodyRowRef,
   tableBodyRef,
 }) => {
+  useEffect(() => {
+    tableBodyRowRef?.current?.scrollIntoView({ block: 'nearest' })
+  }, [selectedRow, tableBodyRowRef])
+
   return (
-    <div className='flex w-full flex-auto flex-col gap-4 overflow-hidden'>
-      <div className='flex h-fit w-full scroll-ml-1 overflow-y-auto'>
+    <div className='flex min-h-0 w-full flex-1 flex-col gap-4 overflow-hidden'>
+      <div className='min-h-0 w-full flex-1 scroll-ml-1 overflow-auto' style={{ scrollbarGutter: 'stable' }}>
         <Table context={context}>
           <TableBody ref={tableBodyRef}>
             {table.getRowModel().rows.map((row, index: number) => (

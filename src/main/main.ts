@@ -162,7 +162,9 @@ const createMainWindow = async () => {
     icon: getAssetPath('icon.png'),
     ...titlebarStyles,
     webPreferences: {
-      sandbox: true,
+      sandbox: false,
+      contextIsolation: true,
+      nodeIntegration: false,
       preload: app.isPackaged ? join(__dirname, 'preload.js') : join(__dirname, '../../configs/dll/preload.js'),
     },
   })

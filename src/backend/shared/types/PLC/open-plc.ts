@@ -2,28 +2,33 @@ import { z } from 'zod'
 
 import { zodFBDFlowSchema, zodLadderFlowSchema } from '../../../../middleware/shared/ports/flow-schemas'
 
-const baseTypeSchema = z.enum([
-  'bool',
-  'sint',
-  'int',
-  'dint',
-  'lint',
-  'usint',
-  'uint',
-  'udint',
-  'ulint',
-  'real',
-  'lreal',
-  'time',
-  'date',
-  'tod',
-  'dt',
-  'string',
-  'byte',
-  'word',
-  'dword',
-  'lword',
-])
+const baseTypeValues = [
+  'BOOL',
+  'SINT',
+  'INT',
+  'DINT',
+  'LINT',
+  'USINT',
+  'UINT',
+  'UDINT',
+  'ULINT',
+  'REAL',
+  'LREAL',
+  'TIME',
+  'DATE',
+  'TOD',
+  'DT',
+  'STRING',
+  'BYTE',
+  'WORD',
+  'DWORD',
+  'LWORD',
+] as const
+
+const baseTypeSchema = z.preprocess(
+  (value) => (typeof value === 'string' ? value.toUpperCase() : value),
+  z.enum(baseTypeValues),
+)
 
 type BaseType = z.infer<typeof baseTypeSchema>
 

@@ -85,6 +85,56 @@ describe('parseProjectFiles — basic', () => {
     expect(result.warnings).toBeUndefined()
   })
 
+  it('accepts uppercase IEC base types in project.json', () => {
+    const projectJson = makeProjectJson({
+      dataTypes: [
+        {
+          name: 'MyStruct',
+          derivation: 'structure',
+          variable: [
+            {
+              name: 'counter',
+              type: { definition: 'base-type', value: 'DINT' },
+            },
+          ],
+        },
+      ],
+      configuration: {
+        resource: {
+          tasks: [],
+          instances: [],
+          globalVariables: [
+            {
+              name: 'enabled',
+              type: { definition: 'base-type', value: 'BOOL' },
+              location: '%QX0.0',
+              initialValue: null,
+              documentation: '',
+            },
+          ],
+        },
+      },
+    })
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const result = parseProjectFiles('/p', projectJson, makeDeviceConfig(), makePinMapping(), [], [], [])
+
+    expect(result.warnings).toBeUndefined()
+    expect(consoleSpy).not.toHaveBeenCalledWith(
+      '[parseProjectFiles] project.json Zod errors:',
+      expect.anything(),
+    )
+    expect(result.projectData.dataTypes[0]).toMatchObject({
+      name: 'MyStruct',
+      variable: [{ name: 'counter', type: { definition: 'base-type', value: 'DINT' } }],
+    })
+    expect(result.projectData.configurations.resource.globalVariables[0].type).toEqual({
+      definition: 'base-type',
+      value: 'BOOL',
+    })
+    consoleSpy.mockRestore()
+  })
+
   it('parses ST POU files correctly', () => {
     const pouFiles: RawProjectFile[] = [
       { relativePath: 'pous/programs/Main.st', content: makeStContent('Main', 'PROGRAM') },
