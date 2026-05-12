@@ -604,6 +604,15 @@ export interface CompileProgressEvent {
   level?: string
   firmwarePath?: string
   plcStatus?: string
+  /** Structured compiler diagnostics with POU-level line mapping */
+  diagnostics?: Array<{
+    pouName: string
+    line: number
+    startColumn: number
+    endColumn: number
+    message: string
+    severity: string
+  }>
 }
 
 export interface CompileResult {

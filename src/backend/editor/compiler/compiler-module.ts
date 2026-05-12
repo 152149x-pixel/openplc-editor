@@ -472,6 +472,86 @@ class CompilerModule {
     })
   }
 
+  /**
+   * Build a line mapping from the generated program.st file.
+   * Maps each line in the combined file to a POU name and the line offset within that POU's body.
+   *
+   * The program.st structure is:
+   *   PROGRAM/FUNCTION/FUNCTION_BLOCK PouName
+   *     VAR ... END_VAR
+   *     <body lines>
+   *   END_PROGRAM/END_FUNCTION/END_FUNCTION_BLOCK
+   *
+   * Returns a map: globalLine -> { pouName, bodyLine }
+   */
+  async buildStLineMap(
+    sourceTargetFolderPath: string,
+  ): Promise<Map<number, { pouName: string; bodyLine: number }>> {
+    const stFilePath = join(sourceTargetFolderPath, 'program.st')
+    const lineMap = new Map<number, { pouName: string; bodyLine: number }>()
+
+    try {
+      const content = await readFile(stFilePath, 'utf-8')
+      const lines = content.split('\n')
+
+      let currentPou: string | null = null
+      let inVarBlock = false
+      let bodyStartLine = 0
+      let bodyLineCounter = 0
+
+      const pouStartPattern = /^\s*(PROGRAM|FUNCTION_BLOCK|FUNCTION)\s+(\w+)/i
+      const varStartPattern = /^\s*VAR(_INPUT|_OUTPUT|_IN_OUT|_EXTERNAL|_GLOBAL|_TEMP|_ACCESS)?\s*$/i
+      const varEndPattern = /^\s*END_VAR\s*$/i
+      const pouEndPattern = /^\s*(END_PROGRAM|END_FUNCTION_BLOCK|END_FUNCTION)\s*$/i
+
+      for (let i = 0; i < lines.length; i++) {
+        const lineNum = i + 1 // 1-based
+        const line = lines[i]
+
+        const pouMatch = line.match(pouStartPattern)
+        if (pouMatch && !currentPou) {
+          currentPou = pouMatch[2]
+          inVarBlock = false
+          bodyStartLine = 0
+          bodyLineCounter = 0
+          continue
+        }
+
+        if (currentPou) {
+          if (varStartPattern.test(line)) {
+            inVarBlock = true
+            continue
+          }
+
+          if (inVarBlock && varEndPattern.test(line)) {
+            inVarBlock = false
+            continue
+          }
+
+          if (inVarBlock) {
+            continue
+          }
+
+          if (pouEndPattern.test(line)) {
+            currentPou = null
+            continue
+          }
+
+          // We're in the body of the POU
+          if (bodyStartLine === 0) {
+            bodyStartLine = lineNum
+          }
+          bodyLineCounter++
+          lineMap.set(lineNum, { pouName: currentPou, bodyLine: bodyLineCounter })
+        }
+      }
+    } catch {
+      // If we can't read the file, return empty map
+    }
+
+    return lineMap
+  }
+
   async handleGenerateDebugFiles(
     sourceTargetFolderPath: string,
     handleOutputData: (chunk: Buffer | string, logLevel?: 'info' | 'error') => void,
@@ -1571,10 +1651,74 @@ class CompilerModule {
         _mainProcessPort.postMessage({ logLevel, message: data })
       })
     } catch (error) {
+      const errorMessage = typeof error === 'string' ? error : error instanceof Error ? error.message : JSON.stringify(error)
       _mainProcessPort.postMessage({
         logLevel: 'error',
-        message: typeof error === 'string' ? error : error instanceof Error ? error.message : JSON.stringify(error),
+        message: errorMessage,
       })
+
+      // Build line map and send structured diagnostics to the renderer
+      try {
+        const lineMap = await this.buildStLineMap(sourceTargetFolderPath)
+        if (lineMap.size > 0) {
+          // Parse line numbers from the error message and map them to POUs
+          const diagnostics: Array<{ pouName: string; line: number; startColumn: number; endColumn: number; message: string; severity: string }> = []
+
+          // Try detailed pattern first (file:line:col..col: error)
+          let match: RegExpExecArray | null
+          const detailedPattern = /(?:"[^"]*"|[\w./\\]+):(\d+):(\d+)(?:\.\.(\d+))?:\s*(error|warning)\s*:\s*(.+)/gi
+          while ((match = detailedPattern.exec(errorMessage)) !== null) {
+            const globalLine = parseInt(match[1], 10)
+            const startCol = parseInt(match[2], 10)
+            const endCol = match[3] ? parseInt(match[3], 10) : startCol + 10
+            const severity = match[4].toLowerCase()
+            const msg = match[5].trim()
+
+            const mapping = lineMap.get(globalLine)
+            if (mapping) {
+              diagnostics.push({
+                pouName: mapping.pouName,
+                line: mapping.bodyLine,
+                startColumn: startCol,
+                endColumn: endCol,
+                message: msg,
+                severity,
+              })
+            }
+          }
+
+          // If no detailed matches, try simpler pattern
+          if (diagnostics.length === 0) {
+            const simplePattern2 = /(?:"[^"]*"|[\w./\\]+):(\d+):\s*(error|warning):\s*(.+)/gi
+            while ((match = simplePattern2.exec(errorMessage)) !== null) {
+              const globalLine = parseInt(match[1], 10)
+              const severity = match[2].toLowerCase()
+              const msg = match[3].trim()
+
+              const mapping = lineMap.get(globalLine)
+              if (mapping) {
+                diagnostics.push({
+                  pouName: mapping.pouName,
+                  line: mapping.bodyLine,
+                  startColumn: 1,
+                  endColumn: 1000,
+                  message: msg,
+                  severity,
+                })
+              }
+            }
+          }
+
+          if (diagnostics.length > 0) {
+            _mainProcessPort.postMessage({
+              compilerDiagnostics: diagnostics,
+            })
+          }
+        }
+      } catch {
+        // Line mapping is best-effort, don't fail the error reporting
+      }
+
       _mainProcessPort.postMessage({
         logLevel: 'error',
         message: 'Stopping compilation process.',
@@ -2295,10 +2439,50 @@ class CompilerModule {
         _mainProcessPort.postMessage({ logLevel, message: data })
       })
     } catch (error) {
+      const errorMessage = typeof error === 'string' ? error : error instanceof Error ? error.message : JSON.stringify(error)
       _mainProcessPort.postMessage({
         logLevel: 'error',
-        message: typeof error === 'string' ? error : error instanceof Error ? error.message : JSON.stringify(error),
+        message: errorMessage,
       })
+
+      // Build line map and send structured diagnostics
+      try {
+        const lineMap = await this.buildStLineMap(sourceTargetFolderPath)
+        if (lineMap.size > 0) {
+          const diagnostics: Array<{ pouName: string; line: number; startColumn: number; endColumn: number; message: string; severity: string }> = []
+          const detailedPattern = /(?:"[^"]*"|[\w./\\]+):(\d+):(\d+)(?:\.\.(\d+))?:\s*(error|warning)\s*:\s*(.+)/gi
+          let match: RegExpExecArray | null
+          while ((match = detailedPattern.exec(errorMessage)) !== null) {
+            const globalLine = parseInt(match[1], 10)
+            const startCol = parseInt(match[2], 10)
+            const endCol = match[3] ? parseInt(match[3], 10) : startCol + 10
+            const severity = match[4].toLowerCase()
+            const msg = match[5].trim()
+            const mapping = lineMap.get(globalLine)
+            if (mapping) {
+              diagnostics.push({ pouName: mapping.pouName, line: mapping.bodyLine, startColumn: startCol, endColumn: endCol, message: msg, severity })
+            }
+          }
+          if (diagnostics.length === 0) {
+            const simplePattern2 = /(?:"[^"]*"|[\w./\\]+):(\d+):\s*(error|warning):\s*(.+)/gi
+            while ((match = simplePattern2.exec(errorMessage)) !== null) {
+              const globalLine = parseInt(match[1], 10)
+              const severity = match[2].toLowerCase()
+              const msg = match[3].trim()
+              const mapping = lineMap.get(globalLine)
+              if (mapping) {
+                diagnostics.push({ pouName: mapping.pouName, line: mapping.bodyLine, startColumn: 1, endColumn: 1000, message: msg, severity })
+              }
+            }
+          }
+          if (diagnostics.length > 0) {
+            _mainProcessPort.postMessage({ compilerDiagnostics: diagnostics })
+          }
+        }
+      } catch {
+        // Line mapping is best-effort
+      }
+
       _mainProcessPort.postMessage({
         logLevel: 'error',
         message: 'Stopping debug compilation process.',

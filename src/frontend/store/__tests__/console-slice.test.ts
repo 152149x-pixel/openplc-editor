@@ -30,6 +30,7 @@ describe('createConsoleSlice', () => {
   it('should have correct initial state', () => {
     const state = store.getState()
     expect(state.logs).toEqual([])
+    expect(state.compilerDiagnostics).toEqual([])
     expect(state.filters).toEqual({
       levels: {
         debug: true,

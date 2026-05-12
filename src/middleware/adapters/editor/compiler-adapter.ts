@@ -161,6 +161,19 @@ export function createEditorCompilerAdapter(): CompilerPort {
               return
             }
 
+            // Forward structured compiler diagnostics (line-mapped errors from iec2c)
+            if (data.compilerDiagnostics) {
+              const diagnostics = data.compilerDiagnostics as Array<{
+                pouName: string
+                line: number
+                startColumn: number
+                endColumn: number
+                message: string
+                severity: string
+              }>
+              onProgress({ stage: 'error', message: '', diagnostics })
+            }
+
             // Forward plcStatus for runtime status updates
             if (data.plcStatus) {
               onProgress({ stage: 'arduino', message: '', plcStatus: data.plcStatus as string })

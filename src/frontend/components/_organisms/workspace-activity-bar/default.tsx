@@ -9,6 +9,7 @@ import { executeSaveProject } from '../../../services/save-actions'
 import { useOpenPLCStore } from '../../../store'
 import type { RuntimeConnection } from '../../../store/slices/device/types'
 import { cn } from '../../../utils/cn'
+import { parseCompilerMessage } from '../../../utils/compiler-diagnostics'
 import { logCompilerEvent } from '../../../utils/debugger-session'
 import { isOpenPLCRuntimeTarget, isOpenPLCRuntimeV4Target } from '../../../utils/device'
 import { getErrorMessage } from '../../../utils/get-error-message'
@@ -140,6 +141,13 @@ export const DefaultWorkspaceActivityBar = ({ zoom }: DefaultWorkspaceActivityBa
     setIsCompiling(true)
     addLog({ id: crypto.randomUUID(), level: 'info', message: 'Build process started' })
 
+    // Clear previous compiler diagnostics when starting a new build
+    useOpenPLCStore.getState().consoleActions.clearCompilerDiagnostics()
+
+    // Collect error messages during compilation for diagnostics parsing
+    const errorMessages: string[] = []
+    const pouNames = projectData.pous.map((p) => p.name)
+
     try {
       const result = await compiler.compileProgram(
         {
@@ -158,6 +166,25 @@ export const DefaultWorkspaceActivityBar = ({ zoom }: DefaultWorkspaceActivityBa
               .deviceActions.setPlcRuntimeStatus(event.plcStatus as NonNullable<RuntimeConnection['plcStatus']>)
           }
           logCompilerEvent(event, addLog)
+
+          // Collect error messages for diagnostics
+          if (event.level === 'error' && event.message) {
+            errorMessages.push(event.message)
+          }
+
+          // Handle structured diagnostics from the backend (line-mapped)
+          if (event.diagnostics && event.diagnostics.length > 0) {
+            const entries = event.diagnostics.map((d) => ({
+              pouName: d.pouName,
+              line: d.line,
+              startColumn: d.startColumn,
+              endColumn: d.endColumn,
+              message: d.message,
+              severity: d.severity as 'error' | 'warning' | 'info',
+            }))
+            useOpenPLCStore.getState().consoleActions.setCompilerDiagnostics(entries)
+          }
+
           if (event.firmwarePath && isSimulatorBoard) {
             void simulator.loadFirmware(event.firmwarePath).then((loadResult) => {
               if (loadResult.success) {
@@ -182,6 +209,28 @@ export const DefaultWorkspaceActivityBar = ({ zoom }: DefaultWorkspaceActivityBa
 
       if (!result.success) {
         addLog({ id: crypto.randomUUID(), level: 'error', message: result.error ?? 'Compilation failed' })
+        if (result.error) {
+          errorMessages.push(result.error)
+        }
+      }
+
+      // Parse collected error messages into diagnostics and set them in the store
+      if (errorMessages.length > 0) {
+        const allDiagnostics = errorMessages.flatMap((msg) => parseCompilerMessage(msg, pouNames))
+        const diagnosticEntries = allDiagnostics
+          .filter((d) => d.pouName)
+          .map((d) => ({
+            pouName: d.pouName!,
+            line: d.line,
+            startColumn: d.startColumn,
+            endColumn: d.endColumn,
+            message: d.message,
+            severity: d.severity,
+          }))
+
+        if (diagnosticEntries.length > 0) {
+          useOpenPLCStore.getState().consoleActions.setCompilerDiagnostics(diagnosticEntries)
+        }
       }
     } catch (err: unknown) {
       addLog({ id: crypto.randomUUID(), level: 'error', message: `Build error: ${getErrorMessage(err)}` })

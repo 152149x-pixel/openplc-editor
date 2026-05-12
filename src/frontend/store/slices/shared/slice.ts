@@ -442,6 +442,7 @@ const createSharedSlice: StateCreator<SharedRootState, [], [], SharedSlice> = (s
       getState().workspaceActions.clearWorkspace()
       getState().fileActions.clearFiles()
       getState().consoleActions.clearLogs()
+      getState().consoleActions.clearCompilerDiagnostics()
       getState().historyActions.clearHistory()
       getState().searchActions.clearSearch()
       getState().modalActions.closeModal()

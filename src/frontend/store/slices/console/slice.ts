@@ -15,6 +15,7 @@ const createConsoleSlice: StateCreator<ConsoleSlice, [], [], ConsoleSlice> = (se
     searchTerm: '',
     timestampFormat: 'full',
   },
+  compilerDiagnostics: [],
   consoleActions: {
     addLog: (log) => {
       setState(
@@ -58,6 +59,20 @@ const createConsoleSlice: StateCreator<ConsoleSlice, [], [], ConsoleSlice> = (se
       setState(
         produce((state: ConsoleSlice) => {
           state.filters.timestampFormat = format
+        }),
+      )
+    },
+    setCompilerDiagnostics: (diagnostics) => {
+      setState(
+        produce((state: ConsoleSlice) => {
+          state.compilerDiagnostics = diagnostics
+        }),
+      )
+    },
+    clearCompilerDiagnostics: () => {
+      setState(
+        produce((state: ConsoleSlice) => {
+          state.compilerDiagnostics = []
         }),
       )
     },

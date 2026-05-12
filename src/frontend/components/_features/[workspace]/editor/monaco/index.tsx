@@ -1240,6 +1240,14 @@ void loop()
     if (isDebuggerVisible) return
     handleFileAndWorkspaceSavedState(name)
     updatePou({ name, content: { language, value } })
+
+    // Clear compiler diagnostics for this POU when user edits the code
+    // (stale markers should not persist after code changes)
+    const currentDiagnostics = openPLCStoreBase.getState().compilerDiagnostics
+    if (currentDiagnostics.some((d) => d.pouName.toLowerCase() === name.toLowerCase())) {
+      const remaining = currentDiagnostics.filter((d) => d.pouName.toLowerCase() !== name.toLowerCase())
+      openPLCStoreBase.getState().consoleActions.setCompilerDiagnostics(remaining)
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -1379,6 +1387,55 @@ void loop()
     setIsOpen(false)
     setNewName('')
   }
+
+  // -----------------------------------------------------------------------
+  // Compiler diagnostics markers (red squiggly lines for errors)
+  // -----------------------------------------------------------------------
+
+  const compilerDiagnostics = useOpenPLCStore((state) => state.compilerDiagnostics)
+
+  useEffect(() => {
+    if (!editorRef.current || !monacoRef.current) return
+
+    const model = editorRef.current.getModel()
+    if (!model) return
+
+    // Filter diagnostics for the current POU
+    const pouDiagnostics = compilerDiagnostics.filter(
+      (d) => d.pouName.toLowerCase() === name.toLowerCase(),
+    )
+
+    // Convert diagnostics to Monaco markers
+    const markers: monaco.editor.IMarkerData[] = pouDiagnostics.map((d) => {
+      const lineCount = model.getLineCount()
+      const line = Math.min(Math.max(d.line, 1), lineCount)
+      const lineLength = model.getLineLength(line)
+
+      return {
+        startLineNumber: line,
+        startColumn: Math.min(d.startColumn, lineLength + 1),
+        endLineNumber: line,
+        endColumn: d.endColumn > lineLength ? lineLength + 1 : d.endColumn,
+        message: d.message,
+        severity:
+          d.severity === 'error'
+            ? monacoRef.current!.MarkerSeverity.Error
+            : d.severity === 'warning'
+              ? monacoRef.current!.MarkerSeverity.Warning
+              : monacoRef.current!.MarkerSeverity.Info,
+        source: 'PLC Compiler',
+      }
+    })
+
+    monacoRef.current.editor.setModelMarkers(model, 'plc-compiler', markers)
+
+    // Cleanup: clear markers when component unmounts or diagnostics change
+    return () => {
+      if (monacoRef.current && model && !model.isDisposed()) {
+        monacoRef.current.editor.setModelMarkers(model, 'plc-compiler', [])
+      }
+    }
+  }, [compilerDiagnostics, name, editorMounted, modelVersion])
 
   // -----------------------------------------------------------------------
   // Save editor view state on tab switch
